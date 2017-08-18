@@ -18,7 +18,10 @@ case class Http[A](run: (HttpRead, HttpState) => (HttpWrite, HttpState, HttpValu
    *  2) r.map(z => f(g(z))) == r.map(g).map(f)
    */
   def map[B](f: A => B): Http[B] =
-    ???
+    Http((r, s) => {
+      val (write, state, value) = run(r, s)
+      (write, state, value.map(f))
+    })
 
   /*
    * Exercise 8a.2:
@@ -30,7 +33,15 @@ case class Http[A](run: (HttpRead, HttpState) => (HttpWrite, HttpState, HttpValu
    *
    */
   def flatMap[B](f: A => Http[B]): Http[B] =
-    ???
+    Http((r, s) => {
+      val (write, state, value) = run(r, s)
+      value match {
+        case Ok(v) =>
+          val (newWrite, newState, newV) = f(v).run(r, state)
+          (write ++ newWrite, newState, newV)
+        case _ => (write, state, value.asInstanceOf[HttpValue[B]])
+      }
+    })
 }
 
 object Http {
@@ -42,7 +53,7 @@ object Http {
    * Hint: Try using Http constructor.
    */
   def value[A](a: => A): Http[A] =
-    ???
+    Http((r, s) => (Monoid[HttpWrite].zero, s, Ok(a)))
 
   /*
    * Exercise 8a.4:
@@ -52,7 +63,7 @@ object Http {
    * Hint: Try using Http constructor.
    */
   def httpAsk: Http[HttpRead] =
-    ???
+    Http((r, s) => (Monoid[HttpWrite].zero, s, Ok(r)))
 
   /*
    * Exercise 8a.5:
@@ -62,7 +73,7 @@ object Http {
    * Hint: Try using Http constructor.
    */
   def httpGet: Http[HttpState] =
-    ???
+    Http((r, s) => (Monoid[HttpWrite].zero, s, Ok(s)))
 
   /*
    * Exercise 8a.6:
@@ -72,7 +83,7 @@ object Http {
    * Hint: Try using Http constructor.
    */
   def httpModify(f: HttpState => HttpState): Http[Unit] =
-    ???
+    Http((r, s) => (Monoid[HttpWrite].zero, f(s), Ok(())))
 
   /*
    * Exercise 8a.7:
@@ -83,7 +94,7 @@ object Http {
    *       that have not been specified yet, remember exercise 2 ask?
    */
   def getBody: Http[String] =
-    ???
+    Http((r, s) => (Monoid[HttpWrite].zero, s, Ok(r.body)))
 
   /*
    * Exercise 8a.8:
@@ -94,7 +105,7 @@ object Http {
    *       that have not been specified yet, remember exercise 4 update?
    */
   def addHeader(name: String, value: String): Http[Unit] =
-    ???
+    Http((r, s) => (Monoid[HttpWrite].zero, HttpState(s.resheaders :+ (name, value)), Ok(())))
 
   /*
    * Exercise 8a.9:
@@ -104,7 +115,7 @@ object Http {
    * Hint: Try using Http constructor.
    */
   def log(message: String): Http[Unit] =
-    ???
+    Http((r, s) => (HttpWrite(Vector(message)), s, Ok(())))
 
   implicit def HttpMonad: Monad[Http] =
     new Monad[Http] {
@@ -128,8 +139,12 @@ object HttpExample {
    *
    * Hint: Try using flatMap or for comprehensions.
    */
-  def echo: Http[String] =
-    ???
+  def echo: Http[String] = for {
+    b <- getBody
+    _ <- addHeader("content-type", "text/plain")
+    _ <- log(b.length.toString)
+  } yield b
+
 }
 
 

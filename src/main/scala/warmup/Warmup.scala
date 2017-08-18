@@ -80,8 +80,11 @@ object Warmup {
    * scala> append(List(1, 2, 3, 4), List(5, 6, 7, 8))
    * resX: List[Int] = List(1, 2, 3, 4, 5, 6, 7, 8)
    */
-  def append[A](x: List[A], y: List[A]): List[A] =
-    ???
+  def append[A](x: List[A], y: List[A]): List[A] = x match {
+    case h :: t => h :: append(t, y)
+    case Nil => y
+  }
+
 
   /*
    * Exercise: 0.2:
@@ -99,8 +102,10 @@ object Warmup {
    *     Type annotations are required when scala can
    *     not infer what you mean.
    */
-  def map[A, B](xs: List[A])(f: A => B): List[B] =
-    ???
+  def map[A, B](xs: List[A])(f: A => B): List[B] = xs match {
+    case head :: tail => f(head) :: map(tail)(f)
+    case Nil => Nil
+  }
 
   /*
    * Exercise: 0.3:
@@ -111,8 +116,11 @@ object Warmup {
    * scala> filter(List(1, 2, 3, 4))(i => i < 3)
    * resX: List[Int] = List(1, 2)
    */
-  def filter[A](xs: List[A])(p: A => Boolean): List[A] =
-    ???
+  def filter[A](xs: List[A])(p: A => Boolean): List[A] = xs match {
+    case head :: tail if p(head) => head :: filter(tail)(p)
+    case _ :: tail => filter(tail)(p)
+    case Nil => Nil
+  }
 
   /*
    * Exercise: 0.4:
@@ -132,8 +140,7 @@ object Warmup {
    *     Type annotations are required when scala can
    *     not infer what you mean.
    */
-  def reverse[A](xs: List[A]): List[A] =
-    ???
+  def reverse[A](xs: List[A]): List[A] = xs.foldLeft[List[A]](Nil){ case (rxs, x) => x :: rxs}
 
   /*
    * *Challenge* Exercise: 0.5:
@@ -154,6 +161,11 @@ object Warmup {
    * ~~~ library hint: use can just use List[A]#sorted to sort the list before you start.
    * ~~~ library hint: List[A]#min and List#max exist.
    */
-  def ranges(xs: List[Int]): List[(Int, Int)] =
-    ???
+  def ranges(xs: List[Int]): List[(Int, Int)] = xs.sorted.foldRight[List[(Int, Int)]](Nil) {
+    case (x, ranges) => ranges match {
+      case (floor, ceiling) :: tails if x >= floor - 1 => (x, ceiling) :: tails
+      case _ => (x, x) :: ranges
+    }
+  }
+
 }

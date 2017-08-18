@@ -34,7 +34,7 @@ case class Http[A](run: RWSV[A]) {
    *  2) r.map(z => f(g(z))) == r.map(g).map(f)
    */
   def map[B](f: A => B): Http[B] =
-    ???
+    Http(run.map(f))
 
   /*
    * Exercise 8b.2:
@@ -46,7 +46,7 @@ case class Http[A](run: RWSV[A]) {
    *
    */
   def flatMap[B](f: A => Http[B]): Http[B] =
-    ???
+    Http(run.flatMap(a => f(a).run))
 }
 
 object Http {
@@ -63,7 +63,7 @@ object Http {
    * Hint: Try using Http constructor.
    */
   def value[A](a: => A): Http[A] =
-    ???
+    Http(ReaderT.value[WSV, HttpRead, A](a))
 
   /*
    * Exercise 8b.4:
@@ -73,7 +73,7 @@ object Http {
    * Hint: Try using Http constructor and ReaderT ask.
    */
   def httpAsk: Http[HttpRead] =
-    ???
+    Http(ask[WSV, HttpRead])
 
   /*
    * Exercise 8b.5:
@@ -117,7 +117,9 @@ object Http {
    *     liftM[W_, SV, Unit](???): WSV[Unit]
    */
   def httpModify(f: HttpState => HttpState): Http[Unit] =
-    ???
+    Http(liftM[R_, WSV, Unit](
+      liftM[W_, SV, Unit](
+        modify[V, HttpState](f))))
 
   /*
    * Exercise 8b.7:
@@ -127,7 +129,7 @@ object Http {
    * Hint: Try using Http constructor, HttpWriteT tell MonadTrans.liftM (once).
    */
   def httpTell(w: HttpWrite): Http[Unit] =
-    ???
+    Http(liftM[R_, WSV, Unit](tell[SV, HttpWrite](w)))
 
   /*
    * Exercise 8b.8:
@@ -137,7 +139,7 @@ object Http {
    * Hint: You may want to use httpAsk.
    */
   def getBody: Http[String] =
-    ???
+    httpAsk.map(_.body)
 
   /*
    * Exercise 8b.9:
@@ -147,7 +149,7 @@ object Http {
    * Hint: You may want to use httpModify.
    */
   def addHeader(name: String, value: String): Http[Unit] =
-    ???
+    httpModify(s => HttpState(s.resheaders :+ (name, value)))
 
   /*
    * Exercise 8b.10:
@@ -157,7 +159,7 @@ object Http {
    * Hint: Try using httpTell.
    */
   def log(message: String): Http[Unit] =
-    ???
+    httpTell(HttpWrite(Vector(message)))
 
   implicit def HttpMonad: Monad[Http] =
     new Monad[Http] {
@@ -181,8 +183,11 @@ object HttpExample {
    *
    * Hint: Try using flatMap or for comprehensions.
    */
-  def echo: Http[String] =
-    ???
+  def echo: Http[String] = for {
+   b <- getBody
+   _ <- addHeader("content-type", "text/plain")
+   _ <- log(b.length.toString)
+ } yield b
 }
 
 /** Data type wrapping up all http state data */

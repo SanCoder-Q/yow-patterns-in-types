@@ -22,7 +22,7 @@ case class Writer[W, A](log: W, value: A) {
    *
    */
   def map[B](f: A => B): Writer[W, B] =
-    ???
+    Writer(log, f(value))
 
   /*
    * Exercise 3.2:
@@ -33,8 +33,10 @@ case class Writer[W, A](log: W, value: A) {
    *   r.flatMap(f).flatMap(g) == r.flatMap(z => f(z).flatMap(g))
    *
    */
-  def flatMap[B](f: A => Writer[W, B])(implicit M: Monoid[W]): Writer[W, B] =
-    ???
+  def flatMap[B](f: A => Writer[W, B])(implicit M: Monoid[W]): Writer[W, B] = {
+    val (l, v) = f(value).run
+    Writer(M.append(log, l), v)
+  }
 }
 
 object Writer {
@@ -47,7 +49,7 @@ object Writer {
    * Hint: Try using Writer constructor.
    */
   def value[W: Monoid, A](a: A): Writer[W, A] =
-    ???
+    Writer(Monoid[W].zero, a)
 
   /*
    * Exercise 3.4:
@@ -59,7 +61,7 @@ object Writer {
    * Hint: Try using Writer constructor.
    */
   def tell[W](w: W): Writer[W, Unit] =
-    ???
+    Writer(w, ())
 
   /*
    * Exercise 3.5:
@@ -67,7 +69,7 @@ object Writer {
    * Sequence, a list of Readers, to a Reader of Lists.
    */
   def sequence[W: Monoid, A](writers: List[Writer[W, A]]): Writer[W, List[A]] =
-    ???
+    writers.foldRight(value[W,List[A]](List[A]()))((writer, acc) => acc.flatMap(ws => writer.map(_ :: ws)))
 
   class Writer_[W] {
     type l[a] = Writer[W, a]
